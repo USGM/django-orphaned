@@ -29,6 +29,8 @@ class Command(BaseCommand):
                 delete_files = []
                 skip = ORPHANED_APPS_MEDIABASE_DIRS[app].get('skip', ())
                 exclude = ORPHANED_APPS_MEDIABASE_DIRS[app].get('exclude', ())
+                media_root = ORPHANED_APPS_MEDIABASE_DIRS[app].get(
+                    'media_root', settings.MEDIA_ROOT)
 
                 for model in ContentType.objects.filter(app_label=app):
                     mc = model.model_class()
@@ -42,7 +44,7 @@ class Command(BaseCommand):
                     # we have found a model with FileFields
                     if len(fields) > 0:
                         files = mc.objects.all().values_list(*fields)
-                        needed_files.extend([os.path.join(settings.MEDIA_ROOT, file) for file in filter(None, chain.from_iterable(files))])
+                        needed_files.extend([os.path.join(media_root, file) for file in filter(None, chain.from_iterable(files))])
 
                 # traverse root folder and store all files and empty directories
                 def should_skip(dir):
