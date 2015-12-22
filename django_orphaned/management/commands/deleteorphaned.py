@@ -3,9 +3,17 @@ from django.contrib.contenttypes.models import ContentType
 from django_orphaned.app_settings import ORPHANED_APPS_MEDIABASE_DIRS
 from itertools import chain
 from optparse import make_option
+from easy_thumbnails.alias import aliases
+from easy_thumbnails.files import get_thumbnailer
 import os
 import shutil
 from django.conf import settings
+
+def get_aliases(filename, alias_options):
+    thumb = get_thumbnailer(filename)
+    thumb.generate = False
+    return chain((alias.name for alias in (thumb.get_thumbnail(options) for options in alias_options.values()) if alias), [filename])
+
 
 class Command(BaseCommand):
     help = "Delete all orphaned files"
@@ -44,7 +52,10 @@ class Command(BaseCommand):
                     # we have found a model with FileFields
                     if len(fields) > 0:
                         files = mc.objects.all().values_list(*fields)
-                        needed_files.extend([os.path.join(media_root, file) for file in filter(None, chain.from_iterable(files))])
+                        options = aliases.all(include_global=True)
+                        with_aliases = (os.path.join(media_root, file) for file in chain.from_iterable((get_aliases(filename, options) for filename in filter(None, chain.from_iterable(files)))))
+                        
+                        needed_files.extend(with_aliases)
 
                 # traverse root folder and store all files and empty directories
                 def should_skip(dir):
